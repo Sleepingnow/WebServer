@@ -26,6 +26,16 @@ public:
         /* 销毁信号量 */
         sem_destroy(&m_sem);
     }
+    /* 等待信号量 */
+    bool wait()
+    {
+        return sem_wait(&m_sem) == 0;
+    }
+    /* 释放信号量 */
+    bool post()
+    {
+        return sem_post(&m_sem) == 0;
+    }
 };
 
 /* 封装互斥锁 */

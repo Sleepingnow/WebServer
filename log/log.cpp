@@ -2,6 +2,8 @@
 #include <time.h>
 #include <sys/time.h>
 #include "log.h"
+#include <stdarg.h>
+#include <pthread.h>
 using namespace std;
 
 log::log()

@@ -11,6 +11,8 @@
 #include <queue>
 #include "../locker/locker.h"
 
+using namespace std;
+
 template <class T>
 class block_queue
 {
