@@ -212,7 +212,7 @@ private:
     //根目录
     char* doc_root;
 
-    map<string, string> m_users;
+    std::map<string, string> m_users;
     int m_TRIGMode;
     int m_close_log;
 

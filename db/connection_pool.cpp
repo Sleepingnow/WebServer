@@ -38,17 +38,20 @@ void connection_pool::init(string url, string user, string password, string data
     {
         MYSQL* conn = NULL;
         conn = mysql_init(conn);
-
         if(conn == NULL)
         {
-            LOG_ERROR("MySQL Error");
+            LOG_ERROR("MySQL Error: mysql_init() returns NULL");
             exit(1);
         }
-        conn = mysql_real_connect(conn, url.c_str(), user.c_str(), password.c_str(), database.c_str(), port, NULL, 0);
 
+        conn = mysql_real_connect(conn, url.c_str(), user.c_str(), password.c_str(), database.c_str(), port, NULL, 0);
         if(conn == NULL)
         {
-            LOG_ERROR("MySQL Error");
+            cout << mysql_errno(conn) << "   " << mysql_error(conn) << endl;
+            string err_info(mysql_error(conn));
+			err_info = (string("MySQL Error[errno=")
+				+ std::to_string(mysql_errno(conn)) + string("]: ") + err_info);
+			LOG_ERROR(err_info.c_str());
             exit(1);
         }
         connList.emplace_back(conn);
@@ -133,14 +136,14 @@ connection_pool::~connection_pool()
     destroyPool();
 }
 
-connectiomRAII::connectiomRAII(MYSQL** SQL, connection_pool* conn_pool)
+connectionRAII::connectionRAII(MYSQL** SQL, connection_pool* conn_pool)
 {
     *SQL = conn_pool -> getConnection();
     connRAII = *SQL;
     poolRAII = conn_pool;
 }
 
-connectiomRAII::~connectiomRAII()
+connectionRAII::~connectionRAII()
 {
     poolRAII -> releaseConnection(connRAII);
 }

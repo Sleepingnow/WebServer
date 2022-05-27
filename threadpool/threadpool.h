@@ -8,14 +8,14 @@
 #include "../locker/locker.h"
 #include "../db/connection_pool.h"
 
-template <typename T>
+template <typename U>
 class threadpool
 {
 private:
     int m_thread_number;            //线程池中的线程数
     int m_max_requests;             //请求队列中允许的最大请求数
     pthread_t* m_threads;           //用于描述线程池的数组
-    std::queue<T*> m_queue;         //请求队列
+    std::queue<U*> m_queue;         //请求队列
     locker m_locker;                //保护请求队列的互斥锁
     sem m_stat;                     //信号量，指示是否有任务需要处理
     connection_pool* m_conn_pool;   //数据库连接池
@@ -29,18 +29,13 @@ private:
 public:
     threadpool(int actor_model, connection_pool* conn_pool, int thread_number = 8, int max_request = 10000);
     ~threadpool();
-    bool append(T* request, int state);
-    bool append_p(T* request);
+    bool append(U* request, int state);
+    bool append_p(U* request);
 };
 
-template <typename T>
-threadpool<T>::threadpool(int actor_mode, connection_pool* conn_pool, int thread_number, int max_requests)
+template <typename U>
+threadpool<U>::threadpool(int actor_mode, connection_pool* conn_pool, int thread_number, int max_requests) : m_actor_model(actor_mode),m_thread_number(thread_number), m_max_requests(max_requests), m_threads(NULL), m_conn_pool(conn_pool)
 {
-    m_actor_model = actor_mode;
-    m_conn_pool = conn_pool;
-    m_thread_number = thread_number;
-    m_max_requests = max_requests;
-    m_threads = NULL;
     if(thread_number <= 0 || max_requests <= 0)
         throw std::exception();
     m_threads = new pthread_t[m_thread_number];
@@ -66,33 +61,14 @@ threadpool<T>::threadpool(int actor_mode, connection_pool* conn_pool, int thread
     }
 }
 
-template <typename T>
-threadpool<T>::~threadpool()
+template <typename U>
+threadpool<U>::~threadpool()
 {
     delete[] m_threads;
 }
 
-template <typename T>
-bool threadpool<T>::append(T* request, int state)
-{
-    m.locker.lock();
-    if(m_queue.size() >= m_max_requests)
-    {
-        m_locker.unlock();
-        return false;
-    }
-    request -> m_state = state;
-    // 添加任务
-    m_queue.emplace_back(request);
-    m_locker.unlock();
-
-    // 提醒有任务需要处理
-    m_stat.post();
-    return true;
-}
-
-template <typename T>
-bool threadpool<T>::append_p(T* request)
+template <typename U>
+bool threadpool<U>::append(U* request, int state)
 {
     m_locker.lock();
     if(m_queue.size() >= m_max_requests)
@@ -100,14 +76,33 @@ bool threadpool<T>::append_p(T* request)
         m_locker.unlock();
         return false;
     }
-    m_queue.emplace_back(request);
+    request -> m_state = state;
+    // 添加任务
+    m_queue.emplace(request);
+    m_locker.unlock();
+
+    // 提醒有任务需要处理
+    m_stat.post();
+    return true;
+}
+
+template <typename U>
+bool threadpool<U>::append_p(U* request)
+{
+    m_locker.lock();
+    if(m_queue.size() >= m_max_requests)
+    {
+        m_locker.unlock();
+        return false;
+    }
+    m_queue.emplace(request);
     m_locker.unlock();
     m_stat.post();
     return true;
 }
 
-template <typename T>
-void* threadpool<T>::worker(void* arg)
+template <typename U>
+void* threadpool<U>::worker(void* arg)
 {
     //将参数强转为线程池类，调用成员方法
     threadpool* pool = (threadpool*) arg;
@@ -115,8 +110,9 @@ void* threadpool<T>::worker(void* arg)
     return pool;
 }
 
-template <typename T>
-void threadpool<T>::run()
+// 执行任务
+template <typename U>
+void threadpool<U>::run()
 {
     while(true)
     {
@@ -131,8 +127,8 @@ void threadpool<T>::run()
         }
 
         // 从请求队列中取出第一个任务
-        T* request = m_queue.front();
-        m_queue.pop_front();
+        U* request = m_queue.front();
+        m_queue.pop();
         m_locker.unlock();
         if(!request)
             continue;
@@ -148,7 +144,7 @@ void threadpool<T>::run()
                 {
                     request->improv = 1;
                     // 为该http连接绑定一个mysql连接
-                    connectionRAII mysqlcon(&request->mysql, m_connPool);
+                    connectionRAII mysqlcon(&request->mysql, m_conn_pool);
                     // 处理请求
                     request->process();
                 }
@@ -178,7 +174,7 @@ void threadpool<T>::run()
         // Proactor模式，子线程只负责业务逻辑
         else
         {
-            connectionRAII mysqlcon(&request->mysql, m_connPool);
+            connectionRAII mysqlcon(&request->mysql, m_conn_pool);
             request->process();
         }
     }

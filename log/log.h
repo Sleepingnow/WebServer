@@ -8,8 +8,6 @@
 #include <pthread.h>
 #include "block_queue.h"
 
-using namespace std;
-
 class log
 {
 private:
@@ -39,7 +37,7 @@ private:
     bool m_is_async;                  //同步/异步标志
     FILE* m_fp;                       //log文件指针
     locker m_mutex;                   //互斥锁
-    block_queue<string>* m_log_queue; //阻塞队列
+    block_queue<std::string>* m_log_queue; //阻塞队列
     int m_close_log;                  //关闭日志
 
 public:

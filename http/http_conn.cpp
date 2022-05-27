@@ -20,7 +20,7 @@ void http_conn::initmysql_result(connection_pool* conn_pool)
 {
     // 从连接池中取一个连接
     MYSQL* mysql = NULL;
-    connectiomRAII mysqlcon(&mysql, conn_pool);
+    connectionRAII mysqlcon(&mysql, conn_pool);
 
     // 在user表中检索username, password数据
     if(mysql_query(mysql, "SELECT username, password FROM user"))

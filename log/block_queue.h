@@ -10,7 +10,6 @@
 #include <sys/time.h>
 #include <queue>
 #include "../locker/locker.h"
-
 using namespace std;
 
 template <class T>
@@ -51,7 +50,7 @@ public:
     bool push(const T& value)
     {
         m_mutex.lock();
-        if(mq.size() == m_max_size)
+        if(m_queue.size() == m_max_size)
         {
             //队列已满，需要通知线程取出元素
             m_cond.broadcast();
@@ -102,7 +101,7 @@ public:
         {
             t.tv_sec = now.tv_sec + ms_timeout / 1000;
             t.tv_nsec = (ms_timeout % 1000) * 1000;
-            if(!m_cond.timewait(m_mutex.get(), t)
+            if(!m_cond.timeWait(m_mutex.get(), t))
             {
                 m_mutex.unlock();
                 return false;
