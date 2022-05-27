@@ -86,7 +86,7 @@ void WebServer::sql_pool()
 {
     // 初始化数据库连接池
     m_connPool = connection_pool::getInstance();
-    m_connPool -> init("127.0.0.1", m_user, m_password, m_databaseName, 3306, m_sql_num, m_close_log);
+    m_connPool -> init("localhost", m_user, m_password, m_databaseName, 3306, m_sql_num, m_close_log);
 
     users -> initmysql_result(m_connPool);
 }
@@ -132,7 +132,7 @@ void WebServer::event_listen()
 
     // 创建epoll事件表
     epoll_event events[MAX_EVENT_NUMBER];
-    m_epollfd = epoll_create1(5);
+    m_epollfd = epoll_create(5);
     assert(m_epollfd != -1);
 
     utils.addfd(m_epollfd, m_listenfd, false, m_LISTENTrigmode);
